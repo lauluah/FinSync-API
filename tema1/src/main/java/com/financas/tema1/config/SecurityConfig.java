@@ -24,8 +24,14 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .headers(headers ->
-                        headers.frameOptions(frame -> frame.sameOrigin())) // ← só uma vez
+                        headers.frameOptions(frame -> frame.sameOrigin())).securityMatcher("/**")
                 .authorizeHttpRequests(req -> {
+                    req.requestMatchers(
+                            "/v3/api-docs/**",
+                            "/v3/api-docs.yaml",
+                            "/swagger-ui/**",
+                            "/swagger-ui.html"
+                    ).permitAll();
                     req.requestMatchers(HttpMethod.POST, "/auth/login").permitAll();
                     req.requestMatchers(HttpMethod.POST, "/auth/register").permitAll();
                     req.requestMatchers("/api/transactions/**").authenticated();
@@ -34,6 +40,7 @@ public class SecurityConfig {
                     req.requestMatchers("/insights/**").authenticated();    // ← adicionei
                     req.requestMatchers("/favicon.ico").permitAll();
                     req.requestMatchers("/h2/**").permitAll();
+
                     req.anyRequest().authenticated();
                 })
                 .build();

@@ -4,8 +4,16 @@ import com.financas.tema1.DTO.TransactionCreateDTO;
 import com.financas.tema1.DTO.TransactionDTO;
 import com.financas.tema1.domain.Transaction;
 import com.financas.tema1.domain.User;
+import com.financas.tema1.exceptions.UserNotFoundException;
 import com.financas.tema1.repository.TransactionRepository;
 import com.financas.tema1.repository.UserRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -19,6 +27,8 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/transactions")
+@SecurityRequirement(name = "bearerAuth")
+@Tag(name = "Transações", description = "Criação e consulta de transações financeiras")
 public class TransactionController {
 
     private final TransactionRepository transactionRepository;
@@ -30,7 +40,15 @@ public class TransactionController {
         this.userRepository = userRepository;
     }
 
-    // ─── POST /api/transactions → cria transação ──────────────────
+    @Operation(
+            summary = "Criar transação",
+            responses = {
+                    @ApiResponse(responseCode = "201", description = "Transação criada",
+                            content = @Content(schema = @Schema(implementation = TransactionDTO.class))),
+                    @ApiResponse(responseCode = "400", description = "Dados inválidos", content = @Content),
+                    @ApiResponse(responseCode = "401", description = "Não autenticado", content = @Content)
+            }
+    )
     @PostMapping
     public ResponseEntity<TransactionDTO> create(
             @RequestBody TransactionCreateDTO dto,
@@ -51,11 +69,16 @@ public class TransactionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(toDTO(saved));
     }
 
-    // ─── GET /api/transactions → extrato completo ─────────────────
+    @Operation(
+            summary = "Listar todas as transações",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Lista de transações",
+                            content = @Content(array = @ArraySchema(schema = @Schema(implementation = TransactionDTO.class)))),
+                    @ApiResponse(responseCode = "401", description = "Não autenticado", content = @Content)
+            }
+    )
     @GetMapping
-    public ResponseEntity<List<TransactionDTO>> getAll(
-            Authentication authentication) {
-
+    public ResponseEntity<List<TransactionDTO>> getAll(Authentication authentication) {
         User user = getAuthenticatedUser(authentication);
 
         List<TransactionDTO> transactions = transactionRepository
@@ -67,11 +90,16 @@ public class TransactionController {
         return ResponseEntity.ok(transactions);
     }
 
-    // ─── GET /api/transactions/last30days → últimos 30 dias ───────
+    @Operation(
+            summary = "Transações dos últimos 30 dias",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Transações filtradas",
+                            content = @Content(array = @ArraySchema(schema = @Schema(implementation = TransactionDTO.class)))),
+                    @ApiResponse(responseCode = "401", description = "Não autenticado", content = @Content)
+            }
+    )
     @GetMapping("/last30days")
-    public ResponseEntity<List<TransactionDTO>> getLast30Days(
-            Authentication authentication) {
-
+    public ResponseEntity<List<TransactionDTO>> getLast30Days(Authentication authentication) {
         User user = getAuthenticatedUser(authentication);
         LocalDate thirtyDaysAgo = LocalDate.now().minusDays(30);
 
@@ -85,11 +113,16 @@ public class TransactionController {
         return ResponseEntity.ok(transactions);
     }
 
-    // ─── GET /api/transactions/summary → consolidado por categoria ─
+    @Operation(
+            summary = "Resumo de gastos por categoria",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Mapa categoria → total",
+                            content = @Content(schema = @Schema(implementation = Map.class))),
+                    @ApiResponse(responseCode = "401", description = "Não autenticado", content = @Content)
+            }
+    )
     @GetMapping("/summary")
-    public ResponseEntity<Map<String, BigDecimal>> getSummary(
-            Authentication authentication) {
-
+    public ResponseEntity<Map<String, BigDecimal>> getSummary(Authentication authentication) {
         User user = getAuthenticatedUser(authentication);
 
         Map<String, BigDecimal> summary = transactionRepository
@@ -111,7 +144,7 @@ public class TransactionController {
     private User getAuthenticatedUser(Authentication authentication) {
         String email = authentication.getName();
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+                .orElseThrow(() -> new UserNotFoundException(email));
     }
 
     private TransactionDTO toDTO(Transaction t) {
