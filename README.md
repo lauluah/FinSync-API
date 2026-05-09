@@ -1,212 +1,208 @@
-# 💸 FinSync API
+# FinSync API
 
-> API REST de gestão financeira pessoal com categorização inteligente de gastos e análise por IA (Gemini).
-
----
-
-## 📌 Sobre o Projeto
-
-O **FinSync** é uma API backend desenvolvida em **Java com Spring Boot** que permite registrar, categorizar e analisar transações financeiras. O diferencial é a integração com a IA do **Google Gemini** via **Spring AI**, que responde perguntas sobre o padrão de consumo do usuário com base nas suas transações reais.
+API REST de gerenciamento financeiro pessoal com análise de dados por IA (Gemini), documentação Swagger e pipeline de ingestão de transações externas.
 
 ---
 
-## ✨ Funcionalidades
+## Tecnologias
 
-- 📥 **Ingestão de transações** a partir de fontes externas (simuladas), com deduplicação automática
-- 🧠 **Categorização automática** de gastos por palavras-chave (`FOOD`, `TRANSPORT`, `ENTERTAINMENT`, `OTHER`)
-- 🤖 **Insights financeiros via IA** — faça perguntas em linguagem natural sobre seus gastos
-- 🔐 **Autenticação HTTP Basic** com Spring Security
-- 👤 **Cadastro e login de usuários**
-- 📊 **Listagem de transações** por usuário, ordenadas por data
-
----
-
-## 🗂️ Estrutura do Projeto
-
-```
-src/main/java/com/financas/tema1/
-├── ai/                  # DTOs de request/response da IA
-├── application/         # Estratégias de categorização e normalização
-│   ├── CategoryStrategy.java
-│   ├── DefaultCategoryStrategy.java
-│   └── TransactionNormalizer.java
-├── config/              # Configuração de segurança (Spring Security)
-├── controller/          # Controllers REST
-│   ├── AuthController.java
-│   ├── FinancialAiController.java
-│   ├── InsightController.java
-│   └── transaction/FinancialTransactionController.java
-├── domain/              # Entidades JPA (User, Transaction, Category)
-├── DTO/                 # Objetos de transferência de dados
-├── repository/          # Interfaces JPA
-├── service/             # Lógica de negócio
-│   ├── FinancialAiService.java
-│   ├── IngestionService.java
-│   └── UserService.java
-└── transaction/         # TransactionType enum
-```
+- Java 21
+- Spring Boot 4.0.6
+- Spring Security
+- Spring Data JPA
+- Spring AI (Google Gemini)
+- PostgreSQL (Supabase)
+- SpringDoc OpenAPI (Swagger UI)
 
 ---
 
-## 🛠️ Tecnologias
+## Funcionalidades
 
-| Tecnologia | Uso |
-|---|---|
-| Java 21 | Linguagem principal |
-| Spring Boot 3 | Framework web |
-| Spring Security | Autenticação HTTP Basic |
-| Spring AI | Integração com Google Gemini |
-| Spring Data JPA | Persistência de dados |
-| H2 Database | Banco em memória (dev) |
-| JUnit 5 + AssertJ | Testes unitários |
-| Virtual Threads | Ingestão paralela de transações |
+- Cadastro e autenticação de usuários
+- CRUD de transações financeiras (receitas e despesas)
+- Categorização automática de transações
+- Ingestão de transações de fontes externas com deduplicação via Virtual Threads
+- Insights financeiros gerados por IA (Gemini 2.0 Flash)
+- Resumo dos últimos 30 dias com recomendações
+- Análise de gastos por categoria
+- Documentação interativa via Swagger UI
 
 ---
 
-## 🚀 Como Rodar
+## Configuração
 
 ### Pré-requisitos
 
 - Java 21+
-- Maven 3.8+
-- Chave de API do Google Gemini
+- Maven
+- PostgreSQL (ou conta no Supabase)
+- Chave de API do Google AI Studio
 
-### Configuração
-
-No arquivo `src/main/resources/application.properties`, configure sua chave da API:
+### application.properties
 
 ```properties
+server.port=8080
+spring.application.name=finsync
+
+# PostgreSQL
+spring.datasource.url=jdbc:postgresql://<host>:5432/postgres
+spring.datasource.username=<usuario>
+spring.datasource.password=<senha>
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# JPA
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.open-in-view=false
+
+# Google Gemini
 spring.ai.model.chat=google-genai
-spring.ai.google.genai.api-key=${GOOGLE_API_KEY}
-spring.ai.google.genai.chat.options.model=gemini-2.5-flash
-spring.ai.google.genai.chat.options.temperature=0.3
+spring.ai.google.genai.api-key=SUA_CHAVE_AQUI
+spring.ai.google.genai.chat.options.model=gemini-2.0-flash
+
+# Swagger
+springdoc.api-docs.enabled=true
+springdoc.swagger-ui.enabled=true
 ```
+
+> A chave do Gemini pode ser obtida gratuitamente em [aistudio.google.com](https://aistudio.google.com)
 
 ### Executando
 
 ```bash
-# Clone o repositório
-git clone https://github.com/lauluah/FinSync-API.git
-cd FinSync-API
-
-# Checkout na branch main
-git checkout main
-
-# Rode o projeto
-./mvnw spring-boot:run
-```
-
-A API estará disponível em `http://localhost:8080`.
-
----
-
-## 📡 Endpoints
-
-### Autenticação
-
-| Método | Rota | Descrição | Auth |
-|---|---|---|---|
-| `POST` | `/auth/register` | Cadastra novo usuário | ❌ |
-| `POST` | `/auth/login` | Login HTTP Basic | ❌ |
-
-#### Exemplo — Cadastro
-```http
-POST /auth/register
-{
-  "email": "usuario@email.com",
-  "password": "senha123"
-}
+mvn spring-boot:run
 ```
 
 ---
 
-### Transações
+## Documentação da API
 
-| Método | Rota | Descrição | Auth |
-|---|---|---|---|
-| `POST` | `/api/transactions` | Cria uma transação | ✅ |
-| `GET` | `/api/transactions/user/{userId}` | Lista transações do usuário | ✅ |
+### Postman
 
-#### Exemplo — Criar transação
-```http
-POST /api/transactions
-{
-  "userId": 1,
-  "description": "iFood - Jantar",
-  "amount": "45.90",
-  "category": "FOOD",
-  "date": "2026-04-20",
-  "type": "EXPENSE"
-}
+A documentação completa da API com todos os endpoints, exemplos de requisição e resposta está disponível no Postman:
+
+[![Postman](https://img.shields.io/badge/Postman-Documentação-orange?style=for-the-badge&logo=postman)](https://documenter.getpostman.com/view/39388795/2sBXqNky4U)
+
+> [https://documenter.getpostman.com/view/39388795/2sBXqNky4U](https://documenter.getpostman.com/view/39388795/2sBXqNky4U)
+
+### Swagger UI
+
+Após subir a aplicação localmente, acesse a documentação interativa:
+
 ```
+http://localhost:8080/swagger-ui/index.html
+```
+
+A spec OpenAPI em JSON está disponível em:
+
+```
+http://localhost:8080/v3/api-docs
+```
+
+> No Swagger UI é possível testar os endpoints diretamente pelo navegador clicando em **Authorize** e informando o Bearer Token.
 
 ---
 
-### IA / Insights
+## Endpoints
 
-| Método | Rota | Descrição | Auth |
-|---|---|---|---|
-| `POST` | `/api/ai/insights` | Pergunta à IA sobre seus gastos | ✅ |
-| `POST` | `/insights/resume` | Resumo do padrão de consumo | ✅ |
+### Autenticação — `/auth`
 
-#### Exemplo — Pergunta à IA
-```http
-POST /api/ai/insights
-{
-  "question": "Quanto gastei com alimentação este mês?"
-}
-```
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| POST | `/auth/register` | Registrar novo usuário |
+| POST | `/auth/login` | Login |
 
-#### Exemplo — Resposta da IA
+### Transações — `/api/transactions`
+
+> Requer autenticação Bearer Token
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| POST | `/api/transactions` | Criar transação |
+| GET | `/api/transactions` | Listar todas as transações |
+| GET | `/api/transactions/last30days` | Transações dos últimos 30 dias |
+| GET | `/api/transactions/summary` | Resumo por categoria |
+
+### IA Financeira — `/api/ai`
+
+> Requer autenticação Bearer Token
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| POST | `/api/ai/insights` | Pergunta livre sobre suas finanças |
+| GET | `/api/ai/summary/last30days` | Resumo automático dos últimos 30 dias |
+| GET | `/api/ai/insights/categories` | Análise de gastos por categoria |
+
+### Ingestão — `/api/ingest`
+
+> Requer autenticação Bearer Token
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| POST | `/api/ingest` | Importar transações de fontes externas |
+
+---
+
+## Exceções
+
+A API retorna erros padronizados no formato:
+
 ```json
 {
-  "userId": 1,
-  "question": "Quanto gastei com alimentação este mês?",
-  "answer": "Com base nas suas transações, você gastou R$ 345,90 em alimentação em abril de 2026, distribuídos em 3 transações na categoria FOOD."
+  "timestamp": "2026-05-08T21:00:00",
+  "status": 404,
+  "error": "Not Found",
+  "message": "Usuário não encontrado: email@exemplo.com"
 }
 ```
 
----
-
-## 🧠 Como a Categorização Funciona
-
-A `DefaultCategoryStrategy` normaliza a descrição da categoria por palavras-chave:
-
-| Categoria | Palavras-chave reconhecidas |
-|---|---|
-| `FOOD` | `food`, `alimentacao`, `drink` |
-| `TRANSPORT` | `transport`, `transporte`, `uber` |
-| `ENTERTAINMENT` | `entertain`, `lazer`, `jogo` |
-| `OTHER` | Qualquer outro valor (fallback) |
-
-> A busca é **case-insensitive** e por **substring**, então `"Food & Drinks"` → `FOOD`, `"Uber99"` → `TRANSPORT`, etc.
+| Exception | Status HTTP | Quando é lançada |
+|-----------|-------------|-----------------|
+| `UserNotFoundException` | 404 | Usuário não encontrado por email ou ID |
+| `UserAlreadyExistsException` | 409 | Tentativa de cadastro com e-mail já existente |
+| `InvalidCredentialsException` | 401 | Email ou senha incorretos no login |
+| `TransactionNotFoundException` | 404 | Transação não encontrada por ID |
+| `InvalidTransactionException` | 400 | Dados inválidos na criação de transação |
+| `AiInsightException` | 500 | Pergunta vazia ou erro na chamada ao Gemini |
 
 ---
 
-## 🧪 Testes
+## Categorias disponíveis
 
-```bash
-./mvnw test
+| Categoria | Descrição |
+|-----------|-----------|
+| `FOOD` | Alimentação e bebidas |
+| `TRANSPORT` | Transporte e mobilidade |
+| `ENTERTAINMENT` | Lazer e entretenimento |
+| `SALARY` | Salário |
+| `BONUS` | Bônus e gratificações |
+| `INVESTMENT` | Investimentos |
+| `OTHER` | Outros |
+
+---
+
+## Segurança
+
+- Senhas armazenadas com BCrypt
+- Endpoints protegidos via Spring Security
+- Swagger UI acessível sem autenticação
+- Autenticação via Bearer Token nos endpoints da API
+
+---
+
+## Estrutura do projeto
+
 ```
-
-Os testes unitários cobrem:
-- `DefaultCategoryStrategy` — todos os casos de normalização de categoria
-- `FinancialAiService` — construção de contexto e chamada à IA
-
----
-
-## 🔒 Segurança
-
-A API utiliza **HTTP Basic Authentication**. Todas as rotas sob `/api/**` exigem autenticação. As rotas `/auth/register` e `/auth/login` são públicas.
-
-Senhas são armazenadas com hash **BCrypt**.
-
----
-
-## 📄 Licença
-
-Este projeto foi desenvolvido como projeto de estudo. Livre para uso e modificação.
-
----
-
-<p align="center">Feito com ☕ e Spring Boot</p>
+src/main/java/com/financas/tema1/
+├── ai/               # Records de request/response da IA
+├── application/      # Estratégias de categorização e normalização
+├── config/           # Configurações (Security, OpenAPI)
+├── controller/       # Controllers REST
+├── domain/           # Entidades JPA
+├── DTO/              # Data Transfer Objects
+├── exception/        # Exceptions customizadas e GlobalExceptionHandler
+├── repository/       # Repositórios Spring Data
+├── service/          # Serviços de negócio
+└── transaction/      # Enum TransactionType
+```
